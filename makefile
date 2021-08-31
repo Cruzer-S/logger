@@ -37,13 +37,31 @@ $(OBJECT): $(OBJECT_DIR)/%.o: $(SOURCE_DIR)/%.c
 	$(addprefix -,$(FLAG))
 
 buildall:
-	$(foreach var,$(DLIB), make -C $(var) remake;)
-	@make remake
+ifeq (,$(wildcard ./block))
+	$(shell touch block)
+	$(foreach var,$(DLIB), make -C $(var) buildall;)
+	@make all
+	$(shell rm block)
+endif
+
+debugall:
+ifeq (,$(wildcard ./block))
+	$(shell touch block)
+	$(foreach var,$(DLIB), make -C $(var) debugall;)
+	@make debug
+	$(shell rm block)
+endif
 
 clean:
 	@rm -rf $(OBJECT_DIR)
 	@rm -rf $(TARGET)
 
+cleanall:
+ifeq (,$(wildcard ./block))
+	$(foreach var,$(DLIB), make -C $(var) cleanall;)
+	@make clean
+endif
+
 remake: clean all
 
-.PHONY: clean remake buildall
+.PHONY: clean remake buildall debugall

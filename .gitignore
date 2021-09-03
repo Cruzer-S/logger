@@ -66,3 +66,4 @@ tags
 
 output
 *.o
+build/

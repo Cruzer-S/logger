@@ -51,10 +51,6 @@ Module.symvers
 Mkfile.old
 dkms.conf
 
-# Do not include video files
-*.mp4
-*.h264
-
 # JSON File
 *.json
 

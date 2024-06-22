@@ -26,8 +26,10 @@ Logger logger_create(void)
 	if (logger == NULL)
 		return NULL;
 
-	for (int i = 0; i < LOGGER_MAX_LEVEL; i++)
+	for (int i = 0; i < LOGGER_MAX_LEVEL; i++) {
 		logger->level[i].name = NULL;
+		logger->level[i].format = NULL;
+	}
 
 	return logger;
 }

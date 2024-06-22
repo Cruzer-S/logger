@@ -28,14 +28,6 @@ int logger_log(Logger , int ,
 	const char *formatted, ...
 );
 
-// f : function name
-// n : file name
-// l : line number
-// s : formatted string
-// d : date
-// t : time
-// p : level name
-
 void logger_destroy(Logger );
 
 #endif

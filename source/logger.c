@@ -7,6 +7,7 @@
 #include <stdarg.h>
 #include <time.h>
 #include <threads.h>
+#include <errno.h>
 
 #define LOGGER_BUFSIZ		BUFSIZ
 
@@ -84,6 +85,8 @@ int logger_log(
 	char *fmt_start, *fmt_end;
 
 	size_t copy_len, remain_len;
+
+	int errn = errno; // errno can be changed by standard libraries
 	
 	fmt_start = logger->level[level].format;
 	buf_ptr = buffer;
@@ -109,6 +112,7 @@ int logger_log(
 			case 'd': copy_ptr = get_time_string("%x"); break;
 			case 't': copy_ptr = get_time_string("%X"); break;
 			case 'p': copy_ptr = logger->level[level].name; break;
+			case 'e': copy_ptr = strerror(errn); break;
 			}
 
 			copy_len = strlen(copy_ptr);

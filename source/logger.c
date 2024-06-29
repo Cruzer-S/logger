@@ -64,12 +64,11 @@ static struct logger_level default_level[] = {
 
       { .level = LOGGER_LEVEL_VERB, .name = "verbose", .stream = (FILE *) -2,
 	.format = "[%d %t][%n:%f:%l] (%p) "
-		  STRINGIFY(fGrey) "%s" STRINGIFY(fDefault) "\n"	     },
+		  STRINGIFY(fLightGray) "%s" STRINGIFY(fDefault) "\n"	     },
 
       { .level = LOGGER_LEVEL_PVERB, .name = "verbose", .stream = (FILE *) -2,
 	.format = "[%d %t][%n:%f:%l] (%p) "
-		  STRINGIFY(fGrey) "%s: %e" STRINGIFY(fDefault) "\n"         }
-
+		  STRINGIFY(fLightGray) "%s: %e" STRINGIFY(fDefault) "\n"    }
 };
 
 Logger logger_create(void)

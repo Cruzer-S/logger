@@ -22,6 +22,7 @@ static const int default_level_index[] = {
 	LOGGER_LEVEL_WARN, LOGGER_LEVEL_PWARN,
 	LOGGER_LEVEL_ERRN, LOGGER_LEVEL_PERRN,
 	LOGGER_LEVEL_CRTC, LOGGER_LEVEL_PCRTC,
+	LOGGER_LEVEL_VERB, LOGGER_LEVEL_PVERB
 };
 
 static struct logger_level *logger_level_init = &(struct logger_level) {
@@ -59,7 +60,16 @@ static struct logger_level default_level[] = {
 
       { .level = LOGGER_LEVEL_PCRTC, .name = "critical", .stream = (FILE *) -2,
 	.format = "[%d %t][%n:%f:%l] (%p) "
-		  STRINGIFY(fRed) "%s: %e" STRINGIFY(fDefault) "\n"          }
+		  STRINGIFY(fRed) "%s: %e" STRINGIFY(fDefault) "\n"          },
+
+      { .level = LOGGER_LEVEL_VERB, .name = "verbose", .stream = (FILE *) -2,
+	.format = "[%d %t][%n:%f:%l] (%p) "
+		  STRINGIFY(fGrey) "%s" STRINGIFY(fDefault) "\n"	     },
+
+      { .level = LOGGER_LEVEL_PVERB, .name = "verbose", .stream = (FILE *) -2,
+	.format = "[%d %t][%n:%f:%l] (%p) "
+		  STRINGIFY(fGrey) "%s: %e" STRINGIFY(fDefault) "\n"         }
+
 };
 
 Logger logger_create(void)

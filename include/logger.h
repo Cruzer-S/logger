@@ -17,6 +17,8 @@
 #define LOGGER_LEVEL_PERRN	5
 #define LOGGER_LEVEL_CRTC	6
 #define LOGGER_LEVEL_PCRTC	7
+#define LOGGER_LEVEL_VERB	8
+#define LOGGER_LEVEL_PVERB	9
 
 #define log(LOG, LEVEL, ...) ((LOG) == NULL) ? ((int) 0) :		\
 		(logger_log(LOG, LOGGER_LEVEL_##LEVEL,			\

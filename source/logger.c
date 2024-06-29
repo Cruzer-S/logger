@@ -11,14 +11,55 @@
 
 #define LOGGER_BUFSIZ		BUFSIZ
 
-struct log_level {
-	FILE *fp;
-	char *name;
-	char *format;
-};
+#include "Cruzer-S/termcolor/termcolor.h"
 
 struct logger {
-	struct log_level level[LOGGER_MAX_LEVEL];
+	LoggerLevel level[LOGGER_MAX_LEVEL];
+};
+
+static const int default_level_index[] = {
+	LOGGER_LEVEL_INFO, LOGGER_LEVEL_PINFO,
+	LOGGER_LEVEL_WARN, LOGGER_LEVEL_PWARN,
+	LOGGER_LEVEL_ERRN, LOGGER_LEVEL_PERRN,
+	LOGGER_LEVEL_CRTC, LOGGER_LEVEL_PCRTC,
+};
+
+static struct logger_level *logger_level_init = &(struct logger_level) {
+	.level = -1, .name = NULL, .format = NULL, .stream = NULL
+};
+
+static struct logger_level default_level[] = {
+      { .level = LOGGER_LEVEL_INFO, .name = "info", .stream = (FILE *) -1,
+	.format = "[%d %t][%n:%f:%l] (%p) "
+	          STRINGIFY(fWhite) "%s" STRINGIFY(fDefault) "\n"	     },
+
+      { .level = LOGGER_LEVEL_PINFO, .name = "info", .stream = (FILE *) -1,
+	.format = "[%d %t][%n:%f:%l] (%p) "
+		  STRINGIFY(fWhite) "%s: %e" STRINGIFY(fDefault) "\n"	     },
+
+      { .level = LOGGER_LEVEL_WARN, .name = "warning", .stream = (FILE *) -1,
+	.format = "[%d %t][%n:%f:%l] (%p) "
+		  STRINGIFY(fOrange) "%s" STRINGIFY(fDefault) "\n"	     },
+
+      { .level = LOGGER_LEVEL_PWARN, .name = "warning", .stream = (FILE *) -1,
+	.format = "[%d %t][%n:%f:%l] (%p) "
+		  STRINGIFY(fOrange) "%s: %e" STRINGIFY(fDefault) "\n"	     },
+
+      { .level = LOGGER_LEVEL_ERRN, .name = "error", .stream = (FILE *) -2,
+	.format = "[%d %t][%n:%f:%l] (%p) "
+		  STRINGIFY(fMagenta) "%s" STRINGIFY(fDefault) "\n"	     },
+
+      { .level = LOGGER_LEVEL_PWARN, .name = "error", .stream = (FILE *) -2,
+	.format = "[%d %t][%n:%f:%l] (%p) "
+		  STRINGIFY(fMagenta) "%s: %e" STRINGIFY(fDefault) "\n"	     },
+
+      { .level = LOGGER_LEVEL_CRTC, .name = "critical", .stream = (FILE *) -2,
+	.format = "[%d %t][%n:%f:%l] (%p) "
+		  STRINGIFY(fRed) "%s" STRINGIFY(fDefault) "\n"		     },
+
+      { .level = LOGGER_LEVEL_PCRTC, .name = "critical", .stream = (FILE *) -2,
+	.format = "[%d %t][%n:%f:%l] (%p) "
+		  STRINGIFY(fRed) "%s: %e" STRINGIFY(fDefault) "\n"          }
 };
 
 Logger logger_create(void)
@@ -27,38 +68,45 @@ Logger logger_create(void)
 	if (logger == NULL)
 		return NULL;
 
-	for (int i = 0; i < LOGGER_MAX_LEVEL; i++) {
-		logger->level[i].name = NULL;
-		logger->level[i].format = NULL;
-	}
+	for (int i = 0; i < LOGGER_MAX_LEVEL; i++)
+		logger->level[i] = logger_level_init;
 
 	return logger;
 }
 
 bool logger_define_level(
-		Logger logger,
-		int level, char *name, 
-		FILE *fp
+		Logger logger, LoggerLevel level
 ) {
-	if (logger->level[level].name != NULL)
-		return false;
-	
-	logger->level[level].name = strdup(name);
-	if (logger->level[level].name == NULL)
-		return false;
+	LoggerLevel new_level;
 
-	logger->level[level].fp = fp;
+	if (level->level < 0 || level->level >= LOGGER_MAX_LEVEL)
+		goto RETURN_FALSE;
+
+	if (logger->level[level->level] != logger_level_init)
+		goto RETURN_FALSE;
+
+	new_level = malloc(sizeof(struct logger_level));
+	if (new_level == NULL)
+		goto RETURN_FALSE;
+
+	new_level->name = strdup(level->name);
+	if (new_level->name == NULL)
+		goto FREE_NEW_LEVEL;
+
+	new_level->format = strdup(level->format);
+	if (new_level->format == NULL)
+		goto FREE_NAME;
+
+	new_level->stream = level->stream;
+	new_level->level = level->level;
+
+	logger->level[new_level->level] = new_level;
 
 	return true;
-}
 
-bool logger_set_format(Logger logger, int level, char *format)
-{
-	logger->level[level].format = strdup(format);
-	if (logger->level[level].format == NULL)
-		return false;
-
-	return true;
+FREE_NAME:	free(new_level->name);
+FREE_NEW_LEVEL:	free(new_level);
+RETURN_FALSE:	return false;
 }
 
 static char *get_time_string(char *format)
@@ -69,6 +117,21 @@ static char *get_time_string(char *format)
 	strftime(buffer, sizeof buffer, format, localtime(&t));
 
 	return buffer;
+}
+
+void logger_use_default_form(Logger logger)
+{
+	const int nlevel = sizeof(default_level) / sizeof(struct logger_level);
+
+	for (int i = 0; i < nlevel; i++) {
+		if (default_level[i].stream == (FILE *) -1)
+			default_level[i].stream = stdout;
+
+		if (default_level[i].stream == (FILE *) -2)
+				default_level[i].stream = stderr;
+
+		logger->level[i] = &default_level[i];
+	}
 }
 
 int logger_log(
@@ -88,7 +151,7 @@ int logger_log(
 
 	int errn = errno; // errno can be changed by standard libraries
 	
-	fmt_start = logger->level[level].format;
+	fmt_start = logger->level[level]->format;
 	buf_ptr = buffer;
 	remain_len = sizeof buffer - 1;
  
@@ -111,7 +174,7 @@ int logger_log(
 			case 's': copy_ptr = (char *) formatted; break;
 			case 'd': copy_ptr = get_time_string("%x"); break;
 			case 't': copy_ptr = get_time_string("%X"); break;
-			case 'p': copy_ptr = logger->level[level].name; break;
+			case 'p': copy_ptr = logger->level[level]->name; break;
 			case 'e': copy_ptr = strerror(errn); break;
 			}
 
@@ -132,7 +195,7 @@ int logger_log(
 
 	va_start(list, formatted);
 
-	retval = vfprintf(logger->level[level].fp, buffer, list);
+	retval = vfprintf(logger->level[level]->stream, buffer, list);
 
 	va_end(list);
 
@@ -142,8 +205,15 @@ int logger_log(
 void logger_destroy(Logger logger)
 {
 	for (int i = 0; i < LOGGER_MAX_LEVEL; i++) {
-		free(logger->level[i].name);
-		free(logger->level[i].format);
+		if (logger->level[i] == logger_level_init)
+			continue;
+
+		if (logger->level[i] == &default_level[i])
+			continue;
+
+		free(logger->level[i]->name);
+		free(logger->level[i]->format);
+		free(logger->level[i]);
 	}
 
 	free(logger);

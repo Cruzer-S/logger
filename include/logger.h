@@ -18,11 +18,11 @@
 #define LOGGER_LEVEL_CRTC	6
 #define LOGGER_LEVEL_PCRTC	7
 
-#define log(LOG, LEVEL, ...) 						\
-		logger_log(LOG, LOGGER_LEVEL_##LEVEL,		\
+#define log(LOG, LEVEL, ...) ((LOG) == NULL) ? ((int) 0) :		\
+		(logger_log(LOG, LOGGER_LEVEL_##LEVEL,			\
 			__FILE__, __func__, STRINGIFY(__LINE__),	\
 			__VA_ARGS__					\
-		)
+		))
 
 typedef struct logger *Logger;
 

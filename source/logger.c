@@ -11,11 +11,16 @@
 
 #define LOGGER_BUFSIZ		BUFSIZ
 
+#define DEFINE_LEVEL(L, N, S, F) {			\
+	.level = (LOGGER_LEVEL_##L), .name = (N),	\
+	.stream = (FILE *) S, .format = (F)		\
+}
+
 #include "Cruzer-S/termcolor/termcolor.h"
 
 struct logger {
 	LoggerLevel level[LOGGER_MAX_LEVEL];
-};
+} *logger;
 
 static const int default_level_index[] = {
 	LOGGER_LEVEL_INFO, LOGGER_LEVEL_PINFO,
@@ -25,98 +30,41 @@ static const int default_level_index[] = {
 	LOGGER_LEVEL_VERB, LOGGER_LEVEL_PVERB
 };
 
-static struct logger_level *logger_level_init = &(struct logger_level) {
+static LoggerLevel logger_level_init = &(struct logger_level) {
 	.level = -1, .name = NULL, .format = NULL, .stream = NULL
 };
 
 static struct logger_level default_level[] = {
-      { .level = LOGGER_LEVEL_INFO, .name = "info", .stream = (FILE *) -1,
-	.format = "[%d %t][%n:%f:%l] (%p) "
-	          STRINGIFY(fWhite) "%s" STRINGIFY(fDefault) "\n"	     },
+	DEFINE_LEVEL(INFO, "info", -1, "[%d %t][%n:%f:%l] (%p) "
+		     STRINGIFY(fWhite) "%s" STRINGIFY(fDefault) "\n"),
 
-      { .level = LOGGER_LEVEL_PINFO, .name = "info", .stream = (FILE *) -1,
-	.format = "[%d %t][%n:%f:%l] (%p) "
-		  STRINGIFY(fWhite) "%s: %e" STRINGIFY(fDefault) "\n"	     },
+      	DEFINE_LEVEL(PINFO, "info", -1, "[%d %t][%n:%f:%l] (%p) "
+		     STRINGIFY(fWhite) "%s: %e" STRINGIFY(fDefault) "\n"),
 
-      { .level = LOGGER_LEVEL_WARN, .name = "warning", .stream = (FILE *) -1,
-	.format = "[%d %t][%n:%f:%l] (%p) "
-		  STRINGIFY(fOrange) "%s" STRINGIFY(fDefault) "\n"	     },
+      	DEFINE_LEVEL(WARN, "warning", -1, "[%d %t][%n:%f:%l] (%p) "
+		     STRINGIFY(fOrange) "%s" STRINGIFY(fDefault) "\n"),
 
-      { .level = LOGGER_LEVEL_PWARN, .name = "warning", .stream = (FILE *) -1,
-	.format = "[%d %t][%n:%f:%l] (%p) "
-		  STRINGIFY(fOrange) "%s: %e" STRINGIFY(fDefault) "\n"	     },
+      	DEFINE_LEVEL(PWARN, "warning", -1, "[%d %t][%n:%f:%l] (%p) "
+		     STRINGIFY(fOrange) "%s: %e" STRINGIFY(fDefault) "\n"),
 
-      { .level = LOGGER_LEVEL_ERRN, .name = "error", .stream = (FILE *) -2,
-	.format = "[%d %t][%n:%f:%l] (%p) "
-		  STRINGIFY(fMagenta) "%s" STRINGIFY(fDefault) "\n"	     },
+	DEFINE_LEVEL(ERRN, "error", -2, "[%d %t][%n:%f:%l] (%p) "
+	      	     STRINGIFY(fMagenta) "%s" STRINGIFY(fDefault) "\n"),
+	
+	DEFINE_LEVEL(PWARN, "error", -2, "[%d %t][%n:%f:%l] (%p) "
+		     STRINGIFY(fMagenta) "%s: %e" STRINGIFY(fDefault) "\n"),
 
-      { .level = LOGGER_LEVEL_PWARN, .name = "error", .stream = (FILE *) -2,
-	.format = "[%d %t][%n:%f:%l] (%p) "
-		  STRINGIFY(fMagenta) "%s: %e" STRINGIFY(fDefault) "\n"	     },
+      	DEFINE_LEVEL(CRTC, "critical", -2, "[%d %t][%n:%f:%l] (%p) "
+		     STRINGIFY(fRed) "%s" STRINGIFY(fDefault) "\n"),
 
-      { .level = LOGGER_LEVEL_CRTC, .name = "critical", .stream = (FILE *) -2,
-	.format = "[%d %t][%n:%f:%l] (%p) "
-		  STRINGIFY(fRed) "%s" STRINGIFY(fDefault) "\n"		     },
+      	DEFINE_LEVEL(PCRTC, "critical", -2, "[%d %t][%n:%f:%l] (%p) "
+		     STRINGIFY(fRed) "%s: %e" STRINGIFY(fDefault) "\n"),
 
-      { .level = LOGGER_LEVEL_PCRTC, .name = "critical", .stream = (FILE *) -2,
-	.format = "[%d %t][%n:%f:%l] (%p) "
-		  STRINGIFY(fRed) "%s: %e" STRINGIFY(fDefault) "\n"          },
+      	DEFINE_LEVEL(VERB,  "verbose", -2, "[%d %t][%n:%f:%l] (%p) "
+		     STRINGIFY(fLightGray) "%s" STRINGIFY(fDefault) "\n"),
 
-      { .level = LOGGER_LEVEL_VERB, .name = "verbose", .stream = (FILE *) -2,
-	.format = "[%d %t][%n:%f:%l] (%p) "
-		  STRINGIFY(fLightGray) "%s" STRINGIFY(fDefault) "\n"	     },
-
-      { .level = LOGGER_LEVEL_PVERB, .name = "verbose", .stream = (FILE *) -2,
-	.format = "[%d %t][%n:%f:%l] (%p) "
-		  STRINGIFY(fLightGray) "%s: %e" STRINGIFY(fDefault) "\n"    }
+      	DEFINE_LEVEL(PVERB, "verbose", -2, "[%d %t][%n:%f:%l] (%p) "
+		     STRINGIFY(fLightGray) "%s: %e" STRINGIFY(fDefault) "\n")
 };
-
-Logger logger_create(void)
-{
-	Logger logger = malloc(sizeof(struct logger));
-	if (logger == NULL)
-		return NULL;
-
-	for (int i = 0; i < LOGGER_MAX_LEVEL; i++)
-		logger->level[i] = logger_level_init;
-
-	return logger;
-}
-
-bool logger_define_level(
-		Logger logger, LoggerLevel level
-) {
-	LoggerLevel new_level;
-
-	if (level->level < 0 || level->level >= LOGGER_MAX_LEVEL)
-		goto RETURN_FALSE;
-
-	if (logger->level[level->level] != logger_level_init)
-		goto RETURN_FALSE;
-
-	new_level = malloc(sizeof(struct logger_level));
-	if (new_level == NULL)
-		goto RETURN_FALSE;
-
-	new_level->name = strdup(level->name);
-	if (new_level->name == NULL)
-		goto FREE_NEW_LEVEL;
-
-	new_level->format = strdup(level->format);
-	if (new_level->format == NULL)
-		goto FREE_NAME;
-
-	new_level->stream = level->stream;
-	new_level->level = level->level;
-
-	logger->level[new_level->level] = new_level;
-
-	return true;
-
-FREE_NAME:	free(new_level->name);
-FREE_NEW_LEVEL:	free(new_level);
-RETURN_FALSE:	return false;
-}
 
 static char *get_time_string(char *format)
 {
@@ -128,26 +76,10 @@ static char *get_time_string(char *format)
 	return buffer;
 }
 
-void logger_use_default_form(Logger logger)
+int logger_log(int level,
+	       const char *file, const char *function, const char *line,
+	       const char *formatted, ...)
 {
-	const int nlevel = sizeof(default_level) / sizeof(struct logger_level);
-
-	for (int i = 0; i < nlevel; i++) {
-		if (default_level[i].stream == (FILE *) -1)
-			default_level[i].stream = stdout;
-
-		if (default_level[i].stream == (FILE *) -2)
-				default_level[i].stream = stderr;
-
-		logger->level[i] = &default_level[i];
-	}
-}
-
-int logger_log(
-	Logger logger, int level,
-	const char *file, const char *function, const char *line,
-	const char *formatted, ...
-) {
 	va_list list;
 	int retval;
 
@@ -157,6 +89,9 @@ int logger_log(
 	char *fmt_start, *fmt_end;
 
 	size_t copy_len, remain_len;
+
+	if ( !logger )
+		return -1;
 
 	int errn = errno; // errno can be changed by standard libraries
 	
@@ -211,7 +146,32 @@ int logger_log(
 	return retval;
 }
 
-void logger_destroy(Logger logger)
+
+bool logger_initialize(void)
+{
+	const int nlevel = sizeof(default_level) / sizeof(struct logger_level);
+	
+	logger = malloc(sizeof(struct logger));
+	if (logger == NULL)
+		return false;
+
+	for (int i = 0; i < LOGGER_MAX_LEVEL; i++)
+		logger->level[i] = logger_level_init;
+
+	for (int i = 0; i < nlevel; i++) {
+		if (default_level[i].stream == (FILE *) -1)
+			default_level[i].stream = stdout;
+
+		if (default_level[i].stream == (FILE *) -2)
+				default_level[i].stream = stderr;
+
+		logger->level[i] = &default_level[i];
+	}
+
+	return true;
+}
+
+void logger_destroy(void)
 {
 	for (int i = 0; i < LOGGER_MAX_LEVEL; i++) {
 		if (logger->level[i] == logger_level_init)

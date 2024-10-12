@@ -1,5 +1,3 @@
-#include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
 #include <errno.h>
 
@@ -7,19 +5,15 @@
 
 int main(int argc, char *argv[])
 {
-	Logger logger = logger_create();
-
-	if (logger == NULL)
+	if ( !logger_initialize() )
 		exit(EXIT_FAILURE);
-
-	logger_use_default_form(logger);
 	
-	log(logger, INFO, "%s", "hello");
-	errno = 5; log(logger, PWARN, "something wrong!");
-	errno = 6; log(logger, PERRN, "failed to rollback");
-	log(logger, CRTC, "server died %d", argc);
+	log(INFO, "%s", "hello");
+	errno = 5; log(PWARN, "something wrong!");
+	errno = 6; log(PERRN, "failed to rollback");
+	log(CRTC, "server died %d", argc);
 
-	logger_destroy(logger);
+	logger_destroy();
 
 	return 0;
 }

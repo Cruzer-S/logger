@@ -20,13 +20,12 @@
 #define LOGGER_LEVEL_VERB	8
 #define LOGGER_LEVEL_PVERB	9
 
-#define log(LOG, LEVEL, ...) ((LOG) == NULL) ? ((int) 0) :		\
-		(logger_log(LOG, LOGGER_LEVEL_##LEVEL,			\
+#define log(LEVEL, ...) (						\
+		logger_log(LOGGER_LEVEL_##LEVEL,			\
 			__FILE__, __func__, STRINGIFY(__LINE__),	\
 			__VA_ARGS__					\
-		))
-
-typedef struct logger *Logger;
+		)							\
+	)
 
 typedef struct logger_level {
 	int level;
@@ -35,17 +34,14 @@ typedef struct logger_level {
 	FILE *stream;
 } *LoggerLevel;
 
-Logger logger_create(void);
+bool logger_initialize(void);
 
-void logger_use_default_form(Logger logger);
+bool logger_define_level(LoggerLevel );
 
-bool logger_define_level(Logger, LoggerLevel );
+int logger_log(int level,
+	       const char *file, const char *function, const char *line,
+	       const char *formatted, ...);
 
-int logger_log(Logger , int ,
-	const char *file, const char *function, const char *line,
-	const char *formatted, ...
-);
-
-void logger_destroy(Logger );
+void logger_destroy(void);
 
 #endif

@@ -1,1 +1,1 @@
-Cruzer-S/termcolor
+Cruzer-S/termcolor static

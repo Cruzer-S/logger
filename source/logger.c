@@ -16,7 +16,7 @@
 	.stream = (FILE *) S, .format = (F)		\
 }
 
-#include "Cruzer-S/termcolor/termcolor.h"
+#include "termcolor.h"
 
 struct logger {
 	LoggerLevel level[LOGGER_MAX_LEVEL];
